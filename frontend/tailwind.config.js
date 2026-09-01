@@ -1,80 +1,9 @@
 /** @type {import('tailwindcss').Config} */
+// NOTE: Tailwind v4 reads design tokens from CSS @theme in src/index.css
+// This file is kept for content path scanning compatibility
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  theme: {
-    extend: {
-      colors: {
-        // Stitch Palette
-        "primary": "#55624d", 
-        "primary-container": "#98a68e",
-        "primary-fixed": "#d9e7cd",
-        "primary-fixed-dim": "#bdcbb2",
-        "secondary": "#755754",
-        "secondary-container": "#fed7d2",
-        "secondary-fixed": "#ffdad6",
-        "secondary-fixed-dim": "#e3beba",
-        "tertiary": "#605f56",
-        "tertiary-container": "#a4a298",
-        "tertiary-fixed": "#e5e2d8",
-        "tertiary-fixed-dim": "#c9c7bc",
-        "background": "#f8faf3",
-        "surface": "#f8faf3",
-        "surface-bright": "#f8faf3",
-        "surface-container-lowest": "#ffffff",
-        "surface-container-low": "#f2f4ed",
-        "surface-container": "#ecefe8",
-        "surface-container-high": "#e7e9e2",
-        "surface-container-highest": "#e1e3dc",
-        "surface-dim": "#d8dbd4",
-        "outline": "#757870",
-        "outline-variant": "#c5c8be",
-        "on-background": "#191c18",
-        "on-surface": "#191c18",
-        "on-surface-variant": "#444841",
-        "on-primary": "#ffffff",
-        "on-primary-container": "#2f3c29",
-        "on-secondary": "#ffffff",
-        "on-secondary-container": "#795b58",
-        "on-tertiary": "#ffffff",
-        "on-tertiary-container": "#393931",
-        "error": "#ba1a1a",
-        "error-container": "#ffdad6",
-        "on-error": "#ffffff",
-        "on-error-container": "#93000a",
-        "inverse-surface": "#2e312d",
-        "inverse-on-surface": "#eff2ea",
-        "inverse-primary": "#bdcbb2",
-        // Warm Coral Accent (used for AI highlights and stress sliders in Stitch)
-        "coral-accent": "#fd7e65",
-      },
-      fontFamily: {
-        headline: ["Manrope", "sans-serif"],
-        body: ["'Plus Jakarta Sans'", "sans-serif"],
-        label: ["'Plus Jakarta Sans'", "sans-serif"],
-      },
-      borderRadius: {
-        "DEFAULT": "0.25rem",
-        "lg": "0.5rem",
-        "xl": "0.75rem",
-        "xxl": "24px",
-        "full": "9999px",
-      },
-      spacing: {
-        "container-padding-mobile": "16px",
-        "gutter": "24px",
-        "card-gap": "24px",
-        "unit": "8px",
-        "container-padding-desktop": "32px",
-        "section-margin": "48px",
-      },
-      boxShadow: {
-        soft: "0 4px 20px -2px rgba(85, 98, 77, 0.08)",
-        floating: "0 12px 40px rgba(47, 52, 48, 0.06)",
-      }
-    },
-  },
-  plugins: [],
 }

@@ -1,10 +1,86 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+/* ==========================================
+   TAILWIND V4 THEME CONFIGURATION
+   Migrated from tailwind.config.js to @theme
+   ========================================== */
+@theme {
+  /* === COLORS (Stitch Organic Intelligence Palette) === */
+  --color-primary: #55624d;
+  --color-primary-container: #98a68e;
+  --color-primary-fixed: #d9e7cd;
+  --color-primary-fixed-dim: #bdcbb2;
+
+  --color-secondary: #755754;
+  --color-secondary-container: #fed7d2;
+  --color-secondary-fixed: #ffdad6;
+  --color-secondary-fixed-dim: #e3beba;
+
+  --color-tertiary: #605f56;
+  --color-tertiary-container: #a4a298;
+  --color-tertiary-fixed: #e5e2d8;
+  --color-tertiary-fixed-dim: #c9c7bc;
+
+  --color-background: #f8faf3;
+  --color-surface: #f8faf3;
+  --color-surface-bright: #f8faf3;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f4ed;
+  --color-surface-container: #ecefe8;
+  --color-surface-container-high: #e7e9e2;
+  --color-surface-container-highest: #e1e3dc;
+  --color-surface-dim: #d8dbd4;
+
+  --color-outline: #757870;
+  --color-outline-variant: #c5c8be;
+
+  --color-on-background: #191c18;
+  --color-on-surface: #191c18;
+  --color-on-surface-variant: #444841;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #2f3c29;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #795b58;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #393931;
+
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
+
+  --color-inverse-surface: #2e312d;
+  --color-inverse-on-surface: #eff2ea;
+  --color-inverse-primary: #bdcbb2;
+
+  --color-coral-accent: #fd7e65;
+
+  /* === FONTS === */
+  --font-headline: "Manrope", sans-serif;
+  --font-body: "Plus Jakarta Sans", sans-serif;
+  --font-label: "Plus Jakarta Sans", sans-serif;
+
+  /* === BORDER RADIUS === */
+  --radius-xxl: 24px;
+
+  /* === SPACING === */
+  --spacing-gutter: 24px;
+  --spacing-card-gap: 24px;
+  --spacing-unit: 8px;
+
+  /* === SHADOWS === */
+  --shadow-soft: 0 4px 20px -2px rgba(85, 98, 77, 0.08);
+  --shadow-floating: 0 12px 40px rgba(47, 52, 48, 0.06);
+}
+
+/* ==========================================
+   BASE STYLES
+   ========================================== */
 @layer base {
   body {
-    @apply bg-[#F8FAF3] text-[#1b1c1a] antialiased;
+    background-color: #F8FAF3;
+    color: #1b1c1a;
+    -webkit-font-smoothing: antialiased;
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
@@ -19,6 +95,9 @@
   }
 }
 
+/* ==========================================
+   CUSTOM COMPONENT CLASSES
+   ========================================== */
 .glass-panel {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);

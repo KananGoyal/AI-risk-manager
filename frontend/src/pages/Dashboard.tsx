@@ -9,10 +9,10 @@ export const Dashboard: React.FC = () => {
     queryFn: AnalyticsService.getSummary,
   });
 
-  if (isLoading || !summary) {
+  if (isLoading || !summary || !summary.riskDistribution) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-100px)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#55624d]"></div>
       </div>
     );
   }

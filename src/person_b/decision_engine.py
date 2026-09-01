@@ -8,17 +8,26 @@ from google.genai import types
 
 load_dotenv()
 
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY"),
-    http_options=types.HttpOptions(
-        retry_options=types.HttpRetryOptions(
-            attempts=5,
-            initial_delay=2.0,
-            max_delay=15.0,
-            http_status_codes=[429, 500, 502, 503, 504]
+def _get_client():
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        return None
+    try:
+        return genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(
+                retry_options=types.HttpRetryOptions(
+                    attempts=5,
+                    initial_delay=2.0,
+                    max_delay=15.0,
+                    http_status_codes=[429, 500, 502, 503, 504]
+                )
+            )
         )
-    )
-)
+    except Exception as e:
+        print(f"  [Gemini client init warning] {e}")
+        return None
+
 MODEL = "gemini-2.5-flash-lite"
 
 VALID_DECISIONS = {"Approve", "Manual Review", "Decline"}
@@ -47,30 +56,31 @@ def recommend_decision(explanation: str) -> dict:
     Returns: {"recommendation": "Approve"|"Manual Review"|"Decline",
               "confidence": "High"|"Medium"|"Low"}
     """
-    prompt = (
-        "You are a senior loan underwriter. Based on the risk explanation below, "
-        "output a JSON object with exactly two keys:\n"
-        '  "recommendation": one of "Approve", "Manual Review", or "Decline"\n'
-        '  "confidence": one of "High", "Medium", or "Low"\n\n'
-        "Return ONLY the raw JSON object, no markdown, no commentary.\n\n"
-        f"Risk explanation:\n{explanation}"
-    )
-    try:
-        response = client.models.generate_content(model=MODEL, contents=prompt)
-        raw = response.text.strip()
-        # Strip markdown fences if present
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        result = json.loads(raw)
-        # Validate fields
-        if result.get("recommendation") not in VALID_DECISIONS:
-            raise ValueError(f"Bad recommendation: {result.get('recommendation')}")
-        if result.get("confidence") not in VALID_CONFIDENCES:
-            raise ValueError(f"Bad confidence: {result.get('confidence')}")
-        return result
-    except Exception as e:
-        print(f"  [Gemini fallback] {e}")
-        return _fallback_from_explanation(explanation)
+    client = _get_client()
+    if client:
+        prompt = (
+            "You are a senior loan underwriter. Based on the risk explanation below, "
+            "output a JSON object with exactly two keys:\n"
+            '  "recommendation": one of "Approve", "Manual Review", or "Decline"\n'
+            '  "confidence": one of "High", "Medium", or "Low"\n\n'
+            "Return ONLY the raw JSON object, no markdown, no commentary.\n\n"
+            f"Risk explanation:\n{explanation}"
+        )
+        try:
+            response = client.models.generate_content(model=MODEL, contents=prompt)
+            if response and response.text:
+                raw = response.text.strip()
+                # Strip markdown fences if present
+                if raw.startswith("```"):
+                    raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                result = json.loads(raw)
+                # Validate fields
+                if result.get("recommendation") in VALID_DECISIONS and result.get("confidence") in VALID_CONFIDENCES:
+                    return result
+        except Exception as e:
+            print(f"  [Gemini fallback] {e}")
+
+    return _fallback_from_explanation(explanation)
 
 
 # --------------- test driver ---------------

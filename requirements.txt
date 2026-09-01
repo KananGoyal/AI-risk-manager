@@ -24,3 +24,7 @@ pynvml>=11.5
 streamlit>=1.30
 google-genai>=1.0
 python-dotenv>=1.0
+
+# Backend REST API Server (FastAPI + Uvicorn)
+fastapi>=0.110.0
+uvicorn>=0.28.0

@@ -57,14 +57,14 @@ try:
         if isinstance(gpu_name, bytes):
             gpu_name = gpu_name.decode()
         pynvml.nvmlShutdown()
-        print(f"[benchmark] GPU detected: {gpu_name} ({GPU_MEM_MB:,} MB VRAM)")
+        print(f"[benchmark] GPU detected: {gpu_name} ({GPU_MEM_MB:,} MB VRAM)", flush=True)
     except Exception:
         # Fallback: assume 8GB if we can't query
         GPU_MEM_MB = 8192
-        print(f"[benchmark] cuDF available but couldn't query VRAM. Assuming {GPU_MEM_MB} MB.")
+        print(f"[benchmark] cuDF available but couldn't query VRAM. Assuming {GPU_MEM_MB} MB.", flush=True)
 except ImportError:
-    print("[benchmark] [WARN]  cuDF not available. Running CPU-only benchmark.")
-    print("[benchmark]    Install RAPIDS via conda in WSL2 for GPU benchmarks.")
+    print("[benchmark] [WARN]  cuDF not available. Running CPU-only benchmark.", flush=True)
+    print("[benchmark]    Install RAPIDS via conda in WSL2 for GPU benchmarks.", flush=True)
 
 
 # ---------------------------------------------------------------------
@@ -167,14 +167,14 @@ def estimate_max_rows(base_rows: int, base_mem_mb: float, gpu_mem_mb: int) -> in
 
 def main():
     if not os.path.exists(CLEAN_CSV):
-        print(f"[benchmark] [WARN]  Clean data not found at {CLEAN_CSV}")
-        print("[benchmark]    Run clean_data.py first.")
+        print(f"[benchmark] [WARN]  Clean data not found at {CLEAN_CSV}", flush=True)
+        print("[benchmark]    Run clean_data.py first.", flush=True)
         sys.exit(1)
 
     base_df = pd.read_csv(CLEAN_CSV)
     base_rows = len(base_df)
     base_mem_mb = base_df.memory_usage(deep=True).sum() / (1024 * 1024)
-    print(f"[benchmark] Base dataset: {base_rows:,} rows, ~{base_mem_mb:.1f} MB in-memory")
+    print(f"[benchmark] Base dataset: {base_rows:,} rows, ~{base_mem_mb:.1f} MB in-memory", flush=True)
 
     # -- Define benchmark scales ---------------------------------------
     # Start with the intended scales, then cap based on GPU memory
@@ -182,7 +182,7 @@ def main():
 
     if CUDF_AVAILABLE and GPU_MEM_MB > 0:
         max_rows = estimate_max_rows(base_rows, base_mem_mb, GPU_MEM_MB)
-        print(f"[benchmark] Estimated max GPU rows (with 30% headroom): {max_rows:,}")
+        print(f"[benchmark] Estimated max GPU rows (with 30% headroom): {max_rows:,}", flush=True)
         # Cap the largest scale
         capped_scales = []
         for s in intended_scales:
@@ -197,31 +197,31 @@ def main():
     else:
         scales = intended_scales
 
-    print(f"[benchmark] Benchmark scales: {[f'{s:,}' for s in scales]}")
+    print(f"[benchmark] Benchmark scales: {[f'{s:,}' for s in scales]}", flush=True)
 
     # -- Run benchmarks ------------------------------------------------
     results = []
     actual_max_gpu_scale = 0
 
     for scale in scales:
-        print(f"\n{'='*60}")
-        print(f"  Scale: {scale:,} rows")
-        print(f"{'='*60}")
+        print(f"\n{'='*60}", flush=True)
+        print(f"  Scale: {scale:,} rows", flush=True)
+        print(f"{'='*60}", flush=True)
 
         df_scaled = scale_up(base_df, scale)
 
         # CPU (Pandas)
         cpu_time = benchmark_pandas(df_scaled)
-        print(f"  CPU (Pandas):  {cpu_time:.3f}s")
+        print(f"  CPU (Pandas):  {cpu_time:.3f}s", flush=True)
 
         # GPU (cuDF)
         gpu_time = benchmark_cudf(df_scaled)
         if gpu_time is not None:
             speedup = cpu_time / gpu_time if gpu_time > 0 else float("inf")
-            print(f"  GPU (cuDF):    {gpu_time:.3f}s  ({speedup:.1f}x speedup)")
+            print(f"  GPU (cuDF):    {gpu_time:.3f}s  ({speedup:.1f}x speedup)", flush=True)
             actual_max_gpu_scale = scale
         else:
-            print(f"  GPU (cuDF):    SKIPPED (OOM or not available)")
+            print(f"  GPU (cuDF):    SKIPPED (OOM or not available)", flush=True)
 
         results.append({
             "rows": scale,
@@ -233,7 +233,7 @@ def main():
 
     # -- Generate chart ------------------------------------------------
     generate_chart(results, actual_max_gpu_scale)
-    print(f"\n[benchmark] [OK] Benchmark complete. Chart saved to {CHART_PATH}")
+    print(f"\n[benchmark] [OK] Benchmark complete. Chart saved to {CHART_PATH}", flush=True)
 
 
 def generate_chart(results: list[dict], actual_max_gpu_scale: int):

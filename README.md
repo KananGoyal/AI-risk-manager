@@ -98,16 +98,16 @@ python src/person_a/cloud_upload.py
 
 ---
 
-### 3. Run the Streamlit Dashboard (Option A)
-To run the quick Streamlit-based UI:
+### 3. Run the FastAPI REST API Backend (Recommended)
+To run the production FastAPI backend server bridging ML inference & AI decisioning:
 ```bash
-python -m streamlit run src/person_b/app.py
+python -m uvicorn src.server:app --host 127.0.0.1 --port 8000 --reload
 ```
-This serves a Python-based web app at `http://localhost:8501`.
+API Documentation will be accessible at `http://127.0.0.1:8000/docs`.
 
 ---
 
-### 4. Run the Premium React Frontend (Option B)
+### 4. Run the Modern React + Vite Frontend
 To run the modern production-ready React client:
 ```bash
 # Navigate to the frontend directory
@@ -119,7 +119,16 @@ npm install
 # Start Vite local development server
 npm run dev
 ```
-Open [http://localhost:5173](http://localhost:5173) in your browser to access the application.
+Open [http://localhost:5174](http://localhost:5174) in your browser to access the application.
+
+---
+
+### 5. Run the Streamlit Dashboard (Alternative)
+To run the Streamlit-based UI:
+```bash
+python -m streamlit run src/person_b/app.py
+```
+This serves a Python-based web app at `http://localhost:8501`.
 
 ---
 

@@ -1,3 +1,4 @@
 {
-  "python.defaultInterpreterPath": "C:\\Users\\kanan\\GenAiHackathon\\loan-underwriting-system\\loan-underwriting-system\\.venv\\Scripts\\python.exe"
+  "python.defaultInterpreterPath": "D:\\HACKATHON\\loan-underwriting-system\\.venv\\Scripts\\python.exe",
+  "python.terminal.activateEnvironment": true
 }

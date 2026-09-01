@@ -8,35 +8,51 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 5000,
+  timeout: 3000,
 });
 
 // Helper to wait
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+export const HealthService = {
+  check: async () => {
+    try {
+      const response = await apiClient.get('/health');
+      return response.data;
+    } catch {
+      return { status: 'offline', model_loaded: false };
+    }
+  }
+};
+
 export const ApplicantService = {
   evaluate: async (applicant: ApplicantDetails): Promise<UnderwritingResult> => {
     try {
-      // If the backend API exists, try calling it.
-      // We will prepare the payload mapping contract features
+      // Connect to the backend ML scoring and Gemini decision API
       const payload = {
-        income: applicant.income / 12, // Annual to monthly
-        debt_ratio: applicant.dti / 100, // DTI percentage to ratio
-        credit_lines: applicant.creditLines || 6,
+        name: applicant.name,
+        dob: applicant.dob,
+        ssn: applicant.ssn,
+        employer: applicant.employer,
+        income: applicant.income,
+        monthlyIncome: applicant.monthlyIncome || (applicant.income / 12),
+        dti: applicant.dti,
+        debtRatio: applicant.debtRatio || (applicant.dti / 100),
+        creditLines: applicant.creditLines || 8,
         delinquencies: applicant.delinquencies || 0,
         dependents: applicant.dependents || 0,
         fico: applicant.fico,
-        employer: applicant.employer,
-        name: applicant.name,
+        requestedAmount: applicant.requestedAmount,
+        term: applicant.term
       };
 
       const response = await apiClient.post<UnderwritingResult>('/evaluate', payload);
       return response.data;
     } catch (error) {
-      console.warn('Backend /evaluate API not found or failed, falling back to mock adapter inside frontend.');
+      console.warn('Backend /evaluate API offline, using fallback client adapter:', error);
       
       // High-fidelity Mock Adapter
-      await delay(1200); // Simulate network latency & model processing
+      await delay(800);
 
       // Heuristic model calculations resembling actual underwriting logic
       const incomeScore = Math.max(0, 100 - (applicant.income / 2500)); // lower is better
@@ -134,96 +150,99 @@ export const AnalyticsService = {
   getSummary: async (): Promise<DashboardSummary> => {
     try {
       const response = await apiClient.get<DashboardSummary>('/summary');
-      return response.data;
-    } catch (error) {
-      // Mock Dashboard summary aligning with the Stitch Dashboard design HTML
-      return {
-        processedCount: 1284,
-        approvalRate: 94.2,
-        avgRiskScore: 31.8,
-        pendingReviewsCount: 18,
-        recentApplications: [
-          {
-            initials: 'JD',
-            name: 'Jonathan Doe',
-            amount: 450000,
-            riskScoreText: '18 (Low)',
-            riskScoreColor: '#059669', // low risk green
-            recommendation: 'Auto-Approve',
-            recommendationColor: '#d1fae5',
-            status: 'Finalized',
-            statusColor: '#55624d',
-          },
-          {
-            initials: 'SM',
-            name: 'Sarah Miller',
-            amount: 1200000,
-            riskScoreText: '64 (Mid)',
-            riskScoreColor: '#d97706', // warning amber
-            recommendation: 'Manual Review',
-            recommendationColor: '#eae8e4',
-            status: 'Pending',
-            statusColor: '#fd7e65',
-          },
-          {
-            initials: 'RH',
-            name: 'Robert Hoffman',
-            amount: 85000,
-            riskScoreText: '22 (Low)',
-            riskScoreColor: '#059669',
-            recommendation: 'Auto-Approve',
-            recommendationColor: '#d1fae5',
-            status: 'Finalized',
-            statusColor: '#55624d',
-          },
-          {
-            initials: 'EK',
-            name: 'Elena Kostic',
-            amount: 2450000,
-            riskScoreText: '82 (High)',
-            riskScoreColor: '#dc2626', // error red
-            recommendation: 'Decline',
-            recommendationColor: '#ffdad6',
-            status: 'Rejected',
-            statusColor: '#ba1a1a',
-          }
-        ],
-        recentDecisions: [
-          {
-            id: '1',
-            name: 'Marcus Thorne',
-            loanType: 'Residential Mortgage',
-            recommendation: 'APPROVE',
-            confidence: 98,
-            insight: 'Applicant exhibits strong liquidity and a 12-month zero-default history. Credit utilization remains below 15%. Automated verification confirms stable employment at a Tier-1 tech firm. Suggest waiver on additional document requirements.',
-            time: '10:42 AM Today',
-          },
-          {
-            id: '2',
-            name: 'Lila Vance',
-            loanType: 'Commercial Credit Line',
-            recommendation: 'FLAG',
-            confidence: 62,
-            insight: 'Inconsistent tax filings identified between 2021 and 2022. Business revenue shows cyclical volatility exceeding typical sector benchmarks. Recommend manual verification of Q3 2023 bank statements before proceeding.',
-            time: '09:15 AM Today',
-          }
-        ],
-        riskDistribution: {
-          lowRisk: 72,
-          medRisk: 18,
-          highRisk: 10,
-        },
-        approvalTrends: [
-          { day: 'Mon', value: 40 },
-          { day: 'Tue', value: 55 },
-          { day: 'Wed', value: 45 },
-          { day: 'Thu', value: 70 },
-          { day: 'Fri', value: 85, active: true },
-          { day: 'Sat', value: 60 },
-          { day: 'Sun', value: 50 },
-        ],
-      };
+      if (response.data && response.data.riskDistribution) {
+        return response.data;
+      }
+    } catch {
+      // Clean fallback if backend is starting or offline
     }
+
+    return {
+      processedCount: 1284,
+      approvalRate: 94.2,
+      avgRiskScore: 31.8,
+      pendingReviewsCount: 18,
+      recentApplications: [
+        {
+          initials: 'JD',
+          name: 'Jonathan Doe',
+          amount: 450000,
+          riskScoreText: '18 (Low)',
+          riskScoreColor: '#059669',
+          recommendation: 'Auto-Approve',
+          recommendationColor: '#d1fae5',
+          status: 'Finalized',
+          statusColor: '#55624d',
+        },
+        {
+          initials: 'SM',
+          name: 'Sarah Miller',
+          amount: 1200000,
+          riskScoreText: '64 (Mid)',
+          riskScoreColor: '#d97706',
+          recommendation: 'Manual Review',
+          recommendationColor: '#eae8e4',
+          status: 'Pending',
+          statusColor: '#fd7e65',
+        },
+        {
+          initials: 'RH',
+          name: 'Robert Hoffman',
+          amount: 85000,
+          riskScoreText: '22 (Low)',
+          riskScoreColor: '#059669',
+          recommendation: 'Auto-Approve',
+          recommendationColor: '#d1fae5',
+          status: 'Finalized',
+          statusColor: '#55624d',
+        },
+        {
+          initials: 'EK',
+          name: 'Elena Kostic',
+          amount: 2450000,
+          riskScoreText: '82 (High)',
+          riskScoreColor: '#dc2626',
+          recommendation: 'Decline',
+          recommendationColor: '#ffdad6',
+          status: 'Rejected',
+          statusColor: '#ba1a1a',
+        }
+      ],
+      recentDecisions: [
+        {
+          id: '1',
+          name: 'Marcus Thorne',
+          loanType: 'Residential Mortgage',
+          recommendation: 'APPROVE',
+          confidence: 98,
+          insight: 'Applicant exhibits strong liquidity and a 12-month zero-default history. Credit utilization remains below 15%. Automated verification confirms stable employment at a Tier-1 tech firm. Suggest waiver on additional document requirements.',
+          time: '10:42 AM Today',
+        },
+        {
+          id: '2',
+          name: 'Lila Vance',
+          loanType: 'Commercial Credit Line',
+          recommendation: 'FLAG',
+          confidence: 62,
+          insight: 'Inconsistent tax filings identified between 2021 and 2022. Business revenue shows cyclical volatility exceeding typical sector benchmarks. Recommend manual verification of Q3 2023 bank statements before proceeding.',
+          time: '09:15 AM Today',
+        }
+      ],
+      riskDistribution: {
+        lowRisk: 72,
+        medRisk: 18,
+        highRisk: 10,
+      },
+      approvalTrends: [
+        { day: 'Mon', value: 40 },
+        { day: 'Tue', value: 55 },
+        { day: 'Wed', value: 45 },
+        { day: 'Thu', value: 70 },
+        { day: 'Fri', value: 85, active: true },
+        { day: 'Sat', value: 60 },
+        { day: 'Sun', value: 50 },
+      ],
+    };
   }
 };
 
