@@ -1,140 +1,102 @@
-# 🏦 AI-Powered Loan Underwriting & Risk Analysis System
+# AI Risk Manager — Fraud-Spike Detector
 
-An end-to-end loan underwriting and credit risk assessment application. The system combines modern machine learning (Scikit-Learn risk modeling), cloud analytics (Google BigQuery cohort querying), generative AI (Gemini risk explanations), and a premium modern user interface (Vite + React + TSX + Tailwind CSS & Python Streamlit).
+**Razorpay Buildathon Track 02 Submission**
 
----
-
-## 🏗️ System Architecture
-
-```mermaid
-graph TD
-    A[Raw Loan Data] -->|Preprocessing| B(clean_data.csv)
-    B -->|Model Training| C(Scikit-Learn Model)
-    B -->|Direct Cloud Upload| D[(Google BigQuery)]
-    C -->|Local Predict Probabilities| E[Scoring Service]
-    D -->|Cohort Default Rates| E
-    E -->|Underwriting Contract| F[AI Explanations & Decisions]
-    F -->|Gemini API| G[Natural Language Risk Explanation]
-    F -->|Decision Rules| H[Final Recommendation]
-    G & H -->|Served to| I[React Frontend / Streamlit Dashboard]
-```
+An end-to-end real-time transaction fraud-spike detection, cost trade-off analysis, and generative explainability engine.
 
 ---
 
-## 📁 Repository Structure
+## 🎯 Architecture Pattern
+
+`ingest` → `inject` → `feature engineer` → `train` → `threshold-analyze` → `cohort-compare` → `decide` → `explain` → `serve`
 
 ```
-├── .venv/                      # Python virtual environment
-├── .vscode/                    # VS Code workspace configurations
-├── data/                       # Local data directory (CSV files & trained models)
-├── frontend/                   # Modern React + Vite + TypeScript web client
-│   ├── src/
-│   │   ├── pages/              # App Views (Dashboard, Assessment, History, Settings)
-│   │   ├── components/         # Reusable Tailwind UI components
-│   │   └── services/           # API integration clients
-│   └── package.json            # Node/Vite build configurations
-├── src/                        # Backend Python packages
-│   ├── person_a/               # Data science & Cloud operations
-│   │   ├── clean_data.py       # Data preprocessing
-│   │   ├── train.py            # Model training & serialization
-│   │   ├── cloud_upload.py     # Direct CSV load to BigQuery
-│   │   └── scoring_service.py  # Inference & BQ cohort engine
-│   └── person_b/               # Streamlit application & Decision layers
-│       ├── app.py              # Streamlit dashboard
-│       ├── explain_api.py      # Gemini explanation engine
-│       └── decision_engine.py  # Credit approval decisioning
-├── tests/                      # Automated test suite
-└── requirements.txt            # Python dependencies
+ ┌─────────────────────────┐
+ │ Synthetic Transaction │
+ │ Stream Generator       │
+ └───────────┬─────────────┘
+             │ (simulates live feed)
+             ▼
+ ┌─────────────────────────┐
+ │ Feature Engineering     │
+ │ (rolling windows, 5m/1h)│
+ └───────────┬─────────────┘
+ ┌───────────┴─────────────┐
+ ▼                         ▼
+ ┌───────────────────┐ ┌───────────────────────┐
+ │ Supervised Model  │ │ In-Memory Cohort      │
+ │ (XGBoost/GBDT)    │ │ Engine (<1ms)         │
+ └───────────┬───────┘ └───────────┬───────────┘
+             └────────────┬────────┘
+                          ▼
+             ┌─────────────────────────┐
+             │ Decision Engine         │
+             │ (Defense-only mapping)  │
+             └───────────┬─────────────┘
+                         ▼
+             ┌─────────────────────────┐
+             │ Gemini Explanation Layer│
+             │ (1-2 sentence audit)    │
+             └───────────┬─────────────┘
+                         ▼
+             ┌─────────────────────────┐
+             │ Frontend Dashboard      │
+             │ (React + Vite, live feed)│
+             └─────────────────────────┘
 ```
 
 ---
 
-## 🛠️ Getting Started
+## 🛡️ Hackathon Safety Guardrail
 
-### Prerequisites
-* **Python 3.10+**
-* **Node.js v18+** & **npm**
-* **Google Cloud SDK (gcloud)** authenticated to a GCP project.
+This system is **strictly defense-only**. The decision engine action set is constrained to:
+- `allow`: Clear transaction automatically.
+- `flag_for_review`: Flag for internal analyst review.
+- `hold_for_verification`: Request secondary step-up verification.
+- `auto_decline`: Automated decline with plain-language audit reason.
 
-### 1. Environment Configuration
-Create a `.env` file in the root directory:
-```ini
-# Gemini API Configuration
-GEMINI_API_KEY=your_gemini_api_key
+**Zero outbound automated actions or external party retaliation are included.**
 
-# Google Cloud Configuration
-GCP_PROJECT_ID=your_gcp_project_id
-```
+---
 
-Configure Application Default Credentials (ADC) for Google Cloud:
+## ⚡ Quick Start
+
+### 1. Requirements Setup
 ```bash
-gcloud auth application-default login
-```
-
----
-
-### 2. Backend & Data Pipeline Setup (Python)
-
-Activate the virtual environment and install packages:
-```bash
-# Activate Virtual Environment (Windows PowerShell)
-.venv\Scripts\Activate.ps1
-
-# Install requirements
 pip install -r requirements.txt
 ```
 
-Run the data preparation pipeline:
+### 2. Run Data Pipeline & Train Model
 ```bash
-# 1. Clean raw data and save locally
 python src/person_a/clean_data.py
-
-# 2. Train local risk prediction model
+python src/person_a/inject_fraud_spikes.py
 python src/person_a/train.py
-
-# 3. Load clean dataset directly into BigQuery
-python src/person_a/cloud_upload.py
+python src/person_a/threshold_analysis.py
 ```
 
----
-
-### 3. Run the FastAPI REST API Backend (Recommended)
-To run the production FastAPI backend server bridging ML inference & AI decisioning:
+### 3. Run FastAPI Backend REST Server
 ```bash
-python -m uvicorn src.server:app --host 127.0.0.1 --port 8000 --reload
+python src/api_server.py
+# Server runs on http://127.0.0.1:8000
 ```
-API Documentation will be accessible at `http://127.0.0.1:8000/docs`.
 
----
-
-### 4. Run the Modern React + Vite Frontend
-To run the modern production-ready React client:
+### 4. Run Stream Simulator (Optional Standalone)
 ```bash
-# Navigate to the frontend directory
+python src/person_a/simulate_live_stream.py
+```
+
+### 5. Run React Frontend
+```bash
 cd frontend
-
-# Install Node modules
 npm install
-
-# Start Vite local development server
 npm run dev
+# Dashboard opens on http://localhost:5173
 ```
-Open [http://localhost:5174](http://localhost:5174) in your browser to access the application.
 
 ---
 
-### 5. Run the Streamlit Dashboard (Alternative)
-To run the Streamlit-based UI:
+## 🧪 Unit Tests
+
 ```bash
-python -m streamlit run src/person_b/app.py
+pytest tests/
 ```
-This serves a Python-based web app at `http://localhost:8501`.
-
----
-
-## 🧠 Key Features
-
-1. **Machine Learning Classifier**: Trains an ensemble classification pipeline predicting applicant default probability based on credit profiles (income, credit lines, historical delinquencies, debt ratio, dependents).
-2. **Direct BigQuery Ingest**: Bypasses intermediate stages and uploads data directly to BigQuery tables using idempotent chunked writes (`WRITE_TRUNCATE`).
-3. **Dynamic Cohort Analysis**: Instantly queries historical database bands (income ±15% and same credit lines) in BigQuery at inference time to contextually anchor applicant performance.
-4. **GenAI Interpretability**: Queries Gemini using systemic risk profiles to produce readable explanations of complex numeric risk indexes.

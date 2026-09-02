@@ -1,0 +1,273 @@
+{
+  "optimal_threshold": 0.05,
+  "recommended_bands": {
+    "low": {
+      "max": 0.05,
+      "action": "allow"
+    },
+    "medium": {
+      "min": 0.05,
+      "max": 0.25,
+      "action": "flag_for_review"
+    },
+    "high": {
+      "min": 0.25,
+      "max": 0.85,
+      "action": "hold_for_verification"
+    },
+    "very_high": {
+      "min": 0.85,
+      "max": 1.0,
+      "action": "auto_decline"
+    }
+  },
+  "threshold_curve": [
+    {
+      "threshold": 0.05,
+      "precision": 0.0957,
+      "recall": 0.2535,
+      "f1_score": 0.139,
+      "tp_count": 18,
+      "fp_count": 170,
+      "fn_count": 53,
+      "estimated_fp_cost": 98932.24,
+      "estimated_fraud_caught": 13509.05,
+      "estimated_fn_cost": 9622.82,
+      "net_loss": 108555.06
+    },
+    {
+      "threshold": 0.1,
+      "precision": 0.1205,
+      "recall": 0.1408,
+      "f1_score": 0.1299,
+      "tp_count": 10,
+      "fp_count": 73,
+      "fn_count": 61,
+      "estimated_fp_cost": 57910.53,
+      "estimated_fraud_caught": 7673.41,
+      "estimated_fn_cost": 15458.46,
+      "net_loss": 73368.99
+    },
+    {
+      "threshold": 0.15,
+      "precision": 0.1064,
+      "recall": 0.0704,
+      "f1_score": 0.0847,
+      "tp_count": 5,
+      "fp_count": 42,
+      "fn_count": 66,
+      "estimated_fp_cost": 36524.14,
+      "estimated_fraud_caught": 3987.55,
+      "estimated_fn_cost": 19144.32,
+      "net_loss": 55668.46
+    },
+    {
+      "threshold": 0.2,
+      "precision": 0.0667,
+      "recall": 0.0282,
+      "f1_score": 0.0396,
+      "tp_count": 2,
+      "fp_count": 28,
+      "fn_count": 69,
+      "estimated_fp_cost": 24904.93,
+      "estimated_fraud_caught": 1684.23,
+      "estimated_fn_cost": 21447.64,
+      "net_loss": 46352.57
+    },
+    {
+      "threshold": 0.25,
+      "precision": 0.1111,
+      "recall": 0.0282,
+      "f1_score": 0.0449,
+      "tp_count": 2,
+      "fp_count": 16,
+      "fn_count": 69,
+      "estimated_fp_cost": 15322.56,
+      "estimated_fraud_caught": 1684.23,
+      "estimated_fn_cost": 21447.64,
+      "net_loss": 36770.2
+    },
+    {
+      "threshold": 0.3,
+      "precision": 0.1538,
+      "recall": 0.0282,
+      "f1_score": 0.0476,
+      "tp_count": 2,
+      "fp_count": 11,
+      "fn_count": 69,
+      "estimated_fp_cost": 11027.22,
+      "estimated_fraud_caught": 1684.23,
+      "estimated_fn_cost": 21447.64,
+      "net_loss": 32474.86
+    },
+    {
+      "threshold": 0.35,
+      "precision": 0.1429,
+      "recall": 0.0141,
+      "f1_score": 0.0256,
+      "tp_count": 1,
+      "fp_count": 6,
+      "fn_count": 70,
+      "estimated_fp_cost": 6386.69,
+      "estimated_fraud_caught": 849.35,
+      "estimated_fn_cost": 22282.52,
+      "net_loss": 28669.21
+    },
+    {
+      "threshold": 0.4,
+      "precision": 0.2,
+      "recall": 0.0141,
+      "f1_score": 0.0263,
+      "tp_count": 1,
+      "fp_count": 4,
+      "fn_count": 70,
+      "estimated_fp_cost": 4643.65,
+      "estimated_fraud_caught": 849.35,
+      "estimated_fn_cost": 22282.52,
+      "net_loss": 26926.17
+    },
+    {
+      "threshold": 0.45,
+      "precision": 0.3333,
+      "recall": 0.0141,
+      "f1_score": 0.027,
+      "tp_count": 1,
+      "fp_count": 2,
+      "fn_count": 70,
+      "estimated_fp_cost": 2345.26,
+      "estimated_fraud_caught": 849.35,
+      "estimated_fn_cost": 22282.52,
+      "net_loss": 24627.78
+    },
+    {
+      "threshold": 0.5,
+      "precision": 0.3333,
+      "recall": 0.0141,
+      "f1_score": 0.027,
+      "tp_count": 1,
+      "fp_count": 2,
+      "fn_count": 70,
+      "estimated_fp_cost": 2345.26,
+      "estimated_fraud_caught": 849.35,
+      "estimated_fn_cost": 22282.52,
+      "net_loss": 24627.78
+    },
+    {
+      "threshold": 0.55,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "tp_count": 0,
+      "fp_count": 1,
+      "fn_count": 71,
+      "estimated_fp_cost": 1157.56,
+      "estimated_fraud_caught": 0.0,
+      "estimated_fn_cost": 23131.87,
+      "net_loss": 24289.43
+    },
+    {
+      "threshold": 0.6,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "tp_count": 0,
+      "fp_count": 1,
+      "fn_count": 71,
+      "estimated_fp_cost": 1157.56,
+      "estimated_fraud_caught": 0.0,
+      "estimated_fn_cost": 23131.87,
+      "net_loss": 24289.43
+    },
+    {
+      "threshold": 0.65,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "tp_count": 0,
+      "fp_count": 0,
+      "fn_count": 71,
+      "estimated_fp_cost": 0.0,
+      "estimated_fraud_caught": 0.0,
+      "estimated_fn_cost": 23131.87,
+      "net_loss": 23131.87
+    },
+    {
+      "threshold": 0.7,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "tp_count": 0,
+      "fp_count": 0,
+      "fn_count": 71,
+      "estimated_fp_cost": 0.0,
+      "estimated_fraud_caught": 0.0,
+      "estimated_fn_cost": 23131.87,
+      "net_loss": 23131.87
+    },
+    {
+      "threshold": 0.75,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "tp_count": 0,
+      "fp_count": 0,
+      "fn_count": 71,
+      "estimated_fp_cost": 0.0,
+      "estimated_fraud_caught": 0.0,
+      "estimated_fn_cost": 23131.87,
+      "net_loss": 23131.87
+    },
+    {
+      "threshold": 0.8,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "tp_count": 0,
+      "fp_count": 0,
+      "fn_count": 71,
+      "estimated_fp_cost": 0.0,
+      "estimated_fraud_caught": 0.0,
+      "estimated_fn_cost": 23131.87,
+      "net_loss": 23131.87
+    },
+    {
+      "threshold": 0.85,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "tp_count": 0,
+      "fp_count": 0,
+      "fn_count": 71,
+      "estimated_fp_cost": 0.0,
+      "estimated_fraud_caught": 0.0,
+      "estimated_fn_cost": 23131.87,
+      "net_loss": 23131.87
+    },
+    {
+      "threshold": 0.9,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "tp_count": 0,
+      "fp_count": 0,
+      "fn_count": 71,
+      "estimated_fp_cost": 0.0,
+      "estimated_fraud_caught": 0.0,
+      "estimated_fn_cost": 23131.87,
+      "net_loss": 23131.87
+    },
+    {
+      "threshold": 0.95,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "tp_count": 0,
+      "fp_count": 0,
+      "fn_count": 71,
+      "estimated_fp_cost": 0.0,
+      "estimated_fraud_caught": 0.0,
+      "estimated_fn_cost": 23131.87,
+      "net_loss": 23131.87
+    }
+  ]
+}

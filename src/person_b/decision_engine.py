@@ -1,115 +1,128 @@
-# src/person_b/decision_engine.py
+"""
+decision_engine.py - Defense-Only Decision & Risk-Band Mapping Engine.
+
+Maps ML risk score -> risk band -> strictly defense-only action:
+- Score < threshold: allow
+- Medium band: flag_for_review
+- High band: hold_for_verification
+- Very high band: auto_decline
+
+Strict Guardrail: Action enum is defense-only. No external party contact or automated retaliation.
+Consumes thresholds dynamically from threshold_analysis.json.
+"""
+
 import os
+import sys
 import json
 import time
-from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from typing import Dict, Any
 
-load_dotenv()
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.abspath(os.path.join(_SCRIPT_DIR, "..", ".."))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
-def _get_client():
-    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        return None
-    try:
-        return genai.Client(
-            api_key=api_key,
-            http_options=types.HttpOptions(
-                retry_options=types.HttpRetryOptions(
-                    attempts=5,
-                    initial_delay=2.0,
-                    max_delay=15.0,
-                    http_status_codes=[429, 500, 502, 503, 504]
-                )
-            )
-        )
-    except Exception as e:
-        print(f"  [Gemini client init warning] {e}")
-        return None
+THRESHOLD_JSON = os.path.join(_PROJECT_ROOT, "data", "models", "threshold_analysis.json")
 
-MODEL = "gemini-2.5-flash-lite"
-
-VALID_DECISIONS = {"Approve", "Manual Review", "Decline"}
-VALID_CONFIDENCES = {"High", "Medium", "Low"}
+# Defensive Action Enum (Strict Hackathon Constraint)
+DEFENSE_ACTIONS = ["allow", "flag_for_review", "hold_for_verification", "auto_decline"]
 
 
-def _fallback_from_explanation(explanation: str) -> dict:
-    """Keyword-based heuristic when Gemini is unavailable."""
-    text = explanation.lower()
-    if any(w in text for w in ["extremely high", "very high", "unsustainable", "severe"]):
-        return {"recommendation": "Decline", "confidence": "High"}
-    if any(w in text for w in ["high risk", "high default"]):
-        return {"recommendation": "Decline", "confidence": "Medium"}
-    if any(w in text for w in ["moderate", "elevated", "borderline"]):
-        return {"recommendation": "Manual Review", "confidence": "Medium"}
-    if any(w in text for w in ["very low", "excellent", "exceptionally"]):
-        return {"recommendation": "Approve", "confidence": "High"}
-    if any(w in text for w in ["low risk", "low default"]):
-        return {"recommendation": "Approve", "confidence": "Medium"}
-    return {"recommendation": "Manual Review", "confidence": "Low"}
-
-
-def recommend_decision(explanation: str) -> dict:
-    """Call Gemini to produce a structured underwriting decision from a risk explanation.
-
-    Returns: {"recommendation": "Approve"|"Manual Review"|"Decline",
-              "confidence": "High"|"Medium"|"Low"}
-    """
-    client = _get_client()
-    if client:
-        prompt = (
-            "You are a senior loan underwriter. Based on the risk explanation below, "
-            "output a JSON object with exactly two keys:\n"
-            '  "recommendation": one of "Approve", "Manual Review", or "Decline"\n'
-            '  "confidence": one of "High", "Medium", or "Low"\n\n'
-            "Return ONLY the raw JSON object, no markdown, no commentary.\n\n"
-            f"Risk explanation:\n{explanation}"
-        )
+def load_threshold_config() -> Dict[str, Any]:
+    """Load threshold configuration from threshold_analysis.json or use defaults."""
+    if os.path.exists(THRESHOLD_JSON):
         try:
-            response = client.models.generate_content(model=MODEL, contents=prompt)
-            if response and response.text:
-                raw = response.text.strip()
-                # Strip markdown fences if present
-                if raw.startswith("```"):
-                    raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-                result = json.loads(raw)
-                # Validate fields
-                if result.get("recommendation") in VALID_DECISIONS and result.get("confidence") in VALID_CONFIDENCES:
-                    return result
+            with open(THRESHOLD_JSON, "r") as f:
+                data = json.load(f)
+                return data
         except Exception as e:
-            print(f"  [Gemini fallback] {e}")
+            print(f"[decision_engine] Warning reading threshold_analysis.json: {e}")
 
-    return _fallback_from_explanation(explanation)
+    # Default fallback bands if file not present
+    return {
+        "optimal_threshold": 0.35,
+        "recommended_bands": {
+            "low": {"max": 0.35, "action": "allow"},
+            "medium": {"min": 0.35, "max": 0.60, "action": "flag_for_review"},
+            "high": {"min": 0.60, "max": 0.85, "action": "hold_for_verification"},
+            "very_high": {"min": 0.85, "max": 1.00, "action": "auto_decline"}
+        }
+    }
 
 
-# --------------- test driver ---------------
+def evaluate_decision(scored_transaction: Dict[str, Any]) -> Dict[str, Any]:
+    """Evaluate decision engine logic on a scored transaction dictionary."""
+    score = float(scored_transaction.get("risk_score", 0.0))
+    tx_id = scored_transaction.get("transaction_id", f"TXN-{int(time.time()*1000):06d}")
+    ts = str(scored_transaction.get("timestamp", pd.Timestamp.now() if 'pd' in globals() else "2026-01-01"))
+
+    cfg = load_threshold_config()
+    threshold = float(cfg.get("optimal_threshold", 0.35))
+
+    # Map score to band and action
+    if score < threshold:
+        risk_band = "low"
+        action = "allow"
+    elif score < threshold + 0.25:
+        risk_band = "medium"
+        action = "flag_for_review"
+    elif score < 0.85:
+        risk_band = "high"
+        action = "hold_for_verification"
+    else:
+        risk_band = "very_high"
+        action = "auto_decline"
+
+    # Enforce strict defense-only action constraint
+    if action not in DEFENSE_ACTIONS:
+        action = "flag_for_review"
+
+    # Extract top contributing features (deltas/importance)
+    features = scored_transaction.get("features", {})
+    top_features = {}
+    if features:
+        # Sort features by absolute deviation/value for explainability signal
+        sorted_feats = sorted(
+            features.items(),
+            key=lambda x: abs(x[1]) if isinstance(x[1], (int, float)) else 0,
+            reverse=True
+        )
+        top_features = dict(sorted_feats[:4])
+
+    amount = float(scored_transaction.get("amount", 0.0))
+    est_fp_cost = round(amount * 1.1, 2) if action != "allow" else 0.0
+    est_fraud_caught = round(amount, 2) if (action != "allow" and score >= threshold) else 0.0
+
+    return {
+        "transaction_id": tx_id,
+        "timestamp": ts,
+        "merchant": scored_transaction.get("merchant", "unknown"),
+        "merchant_category": scored_transaction.get("merchant_category", "grocery_pos"),
+        "amount": amount,
+        "card_num": scored_transaction.get("card_num", ""),
+        "device_id": scored_transaction.get("device_id", ""),
+        "risk_score": score,
+        "risk_band": risk_band,
+        "action": action,
+        "cohort_context": scored_transaction.get("cohort_context", {}),
+        "top_features": top_features,
+        "threshold_used": threshold,
+        "estimated_fp_cost_at_threshold": est_fp_cost,
+        "estimated_fraud_caught_at_threshold": est_fraud_caught
+    }
+
+
 if __name__ == "__main__":
-    import sys
-    import os
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-    from person_b.fake_applicants import fake_applicants
-    from person_b.explain_api import explain_risk
-
-    test_params = [
-        (0.05, 3.2),   # Low
-        (0.08, 2.8),   # Low
-        (0.32, 8.5),   # Medium
-        (0.41, 11.0),  # Medium
-        (0.28, 7.1),   # Medium
-        (0.72, 18.4),  # High
-        (0.68, 16.9),  # High
-        (0.91, 24.5),  # High
-    ]
-
-    for i, (applicant, (score, cohort)) in enumerate(zip(fake_applicants, test_params)):
-        label = applicant.get("risk_level_label", "?")
-        print(f"\n=== Applicant {i+1} ({label} risk) ===")
-
-        explanation = explain_risk(applicant, score, cohort)
-        print(f"  Explanation: {explanation[:120]}...")
-
-        decision = recommend_decision(explanation)
-        print(f"  Decision:    {json.dumps(decision)}")
-        time.sleep(4)
+    dummy_scored = {
+        "transaction_id": "TXN-TEST-001",
+        "timestamp": "2026-01-20 16:00:00",
+        "merchant": "fraud_Vandervort_Tech",
+        "merchant_category": "shopping_net",
+        "amount": 1250.00,
+        "risk_score": 0.78,
+        "features": {"amount_baseline_zscore": 3.8, "distinct_cards_per_device_24h": 4.0},
+        "cohort_context": {"historical_mean_amount": 65.0, "amount_ratio_vs_baseline": 19.23}
+    }
+    decision = evaluate_decision(dummy_scored)
+    print("Decision Output:")
+    print(json.dumps(decision, indent=2))

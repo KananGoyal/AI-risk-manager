@@ -1,111 +1,131 @@
-# src/person_b/explain_api.py
+"""
+explain_api.py - Generative AI Fraud-Flag Explanation Layer using Gemini API.
+
+Input: Decision engine structured output (score, band, action, cohort context, top features).
+Output: 1-2 plain-language sentences explaining flag reasons for merchant operations.
+Trigger: Only called when action != "allow".
+Caching: In-memory & SQLite cache keyed by transaction_id.
+"""
+
 import os
+import sys
+import json
 import time
+from typing import Dict, Any
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
 
-load_dotenv()
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.abspath(os.path.join(_SCRIPT_DIR, "..", ".."))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
-def _get_client():
+load_dotenv(os.path.join(_PROJECT_ROOT, ".env"))
+
+# In-memory explanation cache keyed by transaction_id
+_EXPLANATION_CACHE: Dict[str, str] = {}
+MODEL_NAME = "gemini-2.5-flash-lite"
+
+
+def _get_genai_client():
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not api_key:
         return None
     try:
+        from google import genai
+        from google.genai import types
         return genai.Client(
             api_key=api_key,
             http_options=types.HttpOptions(
                 retry_options=types.HttpRetryOptions(
-                    attempts=5,
-                    initial_delay=2.0,
-                    max_delay=15.0,
+                    attempts=3,
+                    initial_delay=1.5,
+                    max_delay=10.0,
                     http_status_codes=[429, 500, 502, 503, 504]
                 )
             )
         )
     except Exception as e:
-        print(f"  [Gemini client init warning] {e}")
+        print(f"[explain_api] Gemini client init warning: {e}")
         return None
 
-MODEL = "gemini-2.5-flash-lite"
 
+def explain_fraud_flag(decision_output: Dict[str, Any]) -> str:
+    """Generate or retrieve a cached 1-2 sentence plain-language fraud explanation."""
+    tx_id = decision_output.get("transaction_id", "UNKNOWN")
+    action = decision_output.get("action", "allow")
 
-def explain_risk(applicant: dict, risk_score: float, cohort_rate: float) -> str:
-    """Call Gemini to produce a 1-2 sentence plain-language risk explanation, or use heuristic fallback."""
-    client = _get_client()
+    # Trigger condition: Only explain flagged/held/declined transactions
+    if action == "allow":
+        return "Transaction cleared standard automated risk checks."
+
+    # Return cached explanation if present
+    if tx_id in _EXPLANATION_CACHE:
+        return _EXPLANATION_CACHE[tx_id]
+
+    score = decision_output.get("risk_score", 0.0)
+    band = decision_output.get("risk_band", "medium")
+    merchant = decision_output.get("merchant", "Merchant")
+    amount = decision_output.get("amount", 0.0)
+    cohort = decision_output.get("cohort_context", {})
+    top_features = decision_output.get("top_features", {})
+
+    mean_amt = cohort.get("historical_mean_amount", 65.0)
+    ratio = cohort.get("amount_ratio_vs_baseline", round(amount / max(mean_amt, 1.0), 1))
+    z_score = cohort.get("baseline_zscore", top_features.get("amount_baseline_zscore", 0.0))
+
+    client = _get_genai_client()
+
     if client:
         prompt = (
-            "You are a loan underwriting analyst. Given the applicant data below, "
-            "write exactly 1-2 sentences explaining why this applicant presents "
-            "the indicated level of default risk. Be specific about which factors "
-            "drive the risk assessment. Do not use bullet points or headers.\n\n"
-            f"Applicant data:\n"
-            f"  Monthly income: ${applicant.get('income', 0):,}\n"
-            f"  Debt ratio: {applicant.get('debt_ratio', 0):.0%}\n"
-            f"  Open credit lines: {applicant.get('credit_lines', 0)}\n"
-            f"  Past delinquencies (90+ days): {applicant.get('delinquencies', 0)}\n"
-            f"  Number of dependents: {applicant.get('dependents', 0)}\n\n"
-            f"ML-predicted default risk score: {risk_score:.2f} (0 = no risk, 1 = certain default)\n"
-            f"Cohort default rate: {cohort_rate:.1f}%\n"
+            "You are a payment fraud risk analyst for a payment gateway. "
+            "Write exactly 1-2 plain-language sentences explaining why the following transaction was flagged. "
+            "Focus on specific numerical deviations (e.g. amount vs historical baseline, device velocity) "
+            "so merchant ops can understand the decision without data science jargon.\n\n"
+            f"Transaction ID: {tx_id}\n"
+            f"Merchant: {merchant} ({decision_output.get('merchant_category', 'general')})\n"
+            f"Amount: ${amount:,.2f} (Historical merchant baseline average: ${mean_amt:,.2f}, {ratio}x baseline)\n"
+            f"Risk Score: {score:.2f} (Band: {band}, Action: {action})\n"
+            f"Baseline Z-Score: {z_score:.2f}\n"
+            f"Top Feature Signals: {json.dumps(top_features)}\n"
         )
         try:
-            response = client.models.generate_content(model=MODEL, contents=prompt)
+            response = client.models.generate_content(model=MODEL_NAME, contents=prompt)
             if response and response.text:
-                return response.text.strip()
+                explanation = response.text.strip()
+                _EXPLANATION_CACHE[tx_id] = explanation
+                return explanation
         except Exception as e:
-            print(f"  [Gemini API call failed] {e}")
+            print(f"[explain_api] Gemini API call error: {e}")
 
-    # Deterministic fallback explanation
-    income = applicant.get("income", 0)
-    debt = applicant.get("debt_ratio", 0)
-    delinq = applicant.get("delinquencies", 0)
-
-    if risk_score <= 0.15 and delinq == 0 and debt <= 0.35:
-        return (
-            f"Applicant displays exceptionally low default risk ({risk_score:.1%}) with a solid monthly income of ${income:,}, "
-            f"a conservative debt ratio of {debt:.0%}, and zero past delinquencies. "
-            f"Historical cohort default rate is low at {cohort_rate:.1f}%."
-        )
-    elif risk_score >= 0.50 or delinq >= 2 or debt >= 0.50:
-        return (
-            f"Applicant presents elevated default risk ({risk_score:.1%}) driven by a high debt ratio ({debt:.0%}) "
-            f"and {delinq} reported past delinquencies. "
-            f"Their peer cohort reflects an increased default probability of {cohort_rate:.1f}%."
-        )
-    else:
-        return (
-            f"Applicant exhibits moderate credit risk ({risk_score:.1%}) with sustainable income (${income:,}) "
-            f"balanced against a {debt:.0%} debt ratio and {delinq} delinquencies. "
-            f"Similar peer cohort default rate is {cohort_rate:.1f}%."
-        )
+    # Deterministic heuristic fallback explanation
+    explanation = (
+        f"Flagged ({action.upper()}): Transaction of ${amount:,.2f} at {merchant} is {ratio}x "
+        f"above the merchant's historical baseline (${mean_amt:,.2f}), presenting an elevated risk score of {score:.2f} "
+        f"with a baseline z-score deviation of {z_score:.1f}."
+    )
+    _EXPLANATION_CACHE[tx_id] = explanation
+    return explanation
 
 
-# --------------- test driver ---------------
 if __name__ == "__main__":
-    import sys
-    import os
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-    from person_b.fake_applicants import fake_applicants
-
-    # Made-up risk_score and cohort_rate values matched to risk labels
-    test_params = [
-        (0.05, 3.2),   # Low
-        (0.08, 2.8),   # Low
-        (0.32, 8.5),   # Medium
-        (0.41, 11.0),  # Medium
-        (0.28, 7.1),   # Medium
-        (0.72, 18.4),  # High
-        (0.68, 16.9),  # High
-        (0.91, 24.5),  # High
-    ]
-
-    for i, (applicant, (score, cohort)) in enumerate(zip(fake_applicants, test_params)):
-        label = applicant.get("risk_level_label", "?")
-        print(f"\n--- Applicant {i+1} ({label} risk) ---")
-        print(f"  Income=${applicant['income']:,}  Debt={applicant['debt_ratio']:.0%}  "
-              f"Delinq={applicant['delinquencies']}  Score={score}")
-        explanation = explain_risk(applicant, score, cohort)
-        print(f"  Explanation: {explanation}")
-        # Small delay to respect free-tier rate limits
-        time.sleep(4)
+    sample_decision = {
+        "transaction_id": "TXN-888999",
+        "action": "hold_for_verification",
+        "risk_score": 0.82,
+        "risk_band": "high",
+        "merchant": "fraud_Vandervort_Tech",
+        "merchant_category": "shopping_net",
+        "amount": 1450.00,
+        "cohort_context": {
+            "historical_mean_amount": 65.0,
+            "amount_ratio_vs_baseline": 22.3,
+            "baseline_zscore": 4.1
+        },
+        "top_features": {
+            "amount_baseline_zscore": 4.1,
+            "distinct_cards_per_device_24h": 3.0
+        }
+    }
+    exp = explain_fraud_flag(sample_decision)
+    print("Generated Fraud Explanation:")
+    print(exp)

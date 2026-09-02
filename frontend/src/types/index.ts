@@ -1,100 +1,63 @@
-export interface ApplicantDetails {
-  name: string;
-  dob: string;
-  ssn: string;
-  employer: string;
-  income: number; // Monthly or Annual depending on input. We will accept annual and convert, or monthly.
-  tenure: number;
-  fico: number;
-  dti: number; // DTI ratio percentage e.g. 22
-  outstandingDebt: string;
-  requestedAmount: number;
-  term: string;
-  // Raw fields used by the original Streamlit model interface:
-  monthlyIncome?: number;
-  debtRatio?: number;
-  creditLines?: number;
-  delinquencies?: number;
-  dependents?: number;
+export type DefenseAction = 'allow' | 'flag_for_review' | 'hold_for_verification' | 'auto_decline';
+export type RiskBand = 'low' | 'medium' | 'high' | 'very_high';
+
+export interface CohortContext {
+  merchant: string;
+  merchant_category: string;
+  historical_mean_amount: number;
+  historical_std_amount?: number;
+  amount_ratio_vs_baseline: number;
+  baseline_zscore: number;
+  historical_fraud_rate?: number;
 }
 
-export interface UnderwritingResult {
-  applicationId: string;
-  applicant: ApplicantDetails;
-  riskScore: number; // 0 to 1000 or 0 to 1
-  percentile: string;
-  recommendation: 'APPROVE' | 'MANUAL REVIEW' | 'DECLINE';
-  confidence: number; // Percentage
-  cohortDefaultRate: number; // Percentage
-  similarBorrowersCount: number;
-  summary: string;
-  keyFactors: Array<{
-    type: 'positive' | 'negative' | 'neutral';
-    label: string;
-    description: string;
-  }>;
-  policyAlignment: string;
-  scoringTime: number; // seconds
-}
-
-export interface HistoryItem {
-  id: string;
-  name: string;
-  type: string;
+export interface ScoredTransaction {
+  id?: number;
+  transaction_id: string;
+  timestamp: string;
+  merchant: string;
+  merchant_category: string;
   amount: number;
-  riskLevel: 'Low Risk' | 'Moderate' | 'Elevated';
-  decision: 'Approved' | 'Declined' | 'In Review';
-  processedDate: string;
-  expandedDetails?: {
-    summary: string;
-    ltv: number;
-    dti: number;
-    fico: number;
-    factors: Array<{
-      type: 'success' | 'info' | 'warning';
-      label: string;
-    }>;
-    timeline: Array<{
-      step: number;
-      label: string;
-      time: string;
-    }>;
-  };
+  card_num?: string;
+  device_id?: string;
+  risk_score: number; // 0.0 to 1.0
+  risk_band: RiskBand;
+  action: DefenseAction;
+  cohort_context: CohortContext;
+  top_features?: Record<string, number>;
+  explanation?: string;
+  threshold_used?: number;
+  estimated_fp_cost?: number;
+  estimated_fraud_caught?: number;
+  created_at?: string;
 }
 
-export interface DashboardSummary {
-  processedCount: number;
-  approvalRate: number; // percentage
-  avgRiskScore: number;
-  pendingReviewsCount: number;
-  recentApplications: Array<{
-    initials: string;
-    name: string;
-    amount: number;
-    riskScoreText: string;
-    riskScoreColor: string; // e.g. 'primary' | 'secondary' | 'error'
-    recommendation: string;
-    recommendationColor: string;
-    status: string;
-    statusColor: string;
-  }>;
-  recentDecisions: Array<{
-    id: string;
-    name: string;
-    loanType: string;
-    recommendation: 'APPROVE' | 'FLAG' | 'DECLINE';
-    confidence: number;
-    insight: string;
-    time: string;
-  }>;
-  riskDistribution: {
-    lowRisk: number;
-    medRisk: number;
-    highRisk: number;
+export interface ThresholdCurvePoint {
+  threshold: number;
+  precision: number;
+  recall: number;
+  f1_score: number;
+  tp_count?: number;
+  fp_count?: number;
+  fn_count?: number;
+  estimated_fp_cost: number;
+  estimated_fraud_caught: number;
+  estimated_fn_cost?: number;
+  net_loss?: number;
+}
+
+export interface ThresholdAnalysisResponse {
+  optimal_threshold: number;
+  recommended_bands: {
+    low: { max: number; action: string };
+    medium: { min: number; max: number; action: string };
+    high: { min: number; max: number; action: string };
+    very_high: { min: number; max: number; action: string };
   };
-  approvalTrends: Array<{
-    day: string;
-    value: number;
-    active?: boolean;
-  }>;
+  threshold_curve: ThresholdCurvePoint[];
+}
+
+export interface StreamResponse {
+  count: number;
+  transactions: ScoredTransaction[];
 }
