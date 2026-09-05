@@ -70,9 +70,10 @@ def start_stream_simulation(interval_seconds: float = 1.0, max_events: Optional[
         out = process_single_event(txn, recent_history)
         processed_count += 1
 
-        # Keep rolling history window for velocity features
+        # Keep rolling history window for velocity features (5000 rows ≈ full 24h across
+        # all merchants, preventing context eviction for active merchant windows)
         recent_history.append(txn)
-        if len(recent_history) > 200:
+        if len(recent_history) > 5000:
             recent_history.pop(0)
 
         flag_str = f" [{out['action'].upper()}]" if out["action"] != "allow" else ""
