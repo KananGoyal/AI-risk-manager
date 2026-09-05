@@ -32,6 +32,10 @@ INJECTED_CSV = os.path.join(PROCESSED_DIR, "injected_transactions.csv")
 MODEL_PATH = os.path.join(MODELS_DIR, "fraud_model.joblib")
 BASELINES_PATH = os.path.join(MODELS_DIR, "merchant_baselines.json")
 REPORT_PATH = os.path.join(MODELS_DIR, "evaluation_report.json")
+THRESHOLD_JSON = os.path.join(MODELS_DIR, "threshold_analysis.json")
+
+# Documented fallback default threshold if threshold_analysis.json is not yet generated
+DEFAULT_THRESHOLD = 0.35
 
 
 def train_model():
@@ -68,6 +72,12 @@ def train_model():
     print(f"[train] Train fraud label ratio: {y_train.mean():.2%}")
     print(f"[train] Test fraud label ratio:  {y_test.mean():.2%}")
 
+    # Compute class imbalance weight for minority fraud class
+    n_neg = int((y_train == 0).sum())
+    n_pos = int((y_train == 1).sum())
+    spw = n_neg / max(n_pos, 1)
+    print(f"[train] scale_pos_weight: {spw:.2f} (neg={n_neg}, pos={n_pos})")
+
     # Model training with XGBoost or HistGradientBoosting fallback
     try:
         from xgboost import XGBClassifier
@@ -78,6 +88,7 @@ def train_model():
             learning_rate=0.08,
             subsample=0.85,
             colsample_bytree=0.85,
+            scale_pos_weight=spw,
             random_state=42,
             eval_metric="logloss"
         )
@@ -93,9 +104,22 @@ def train_model():
         )
         model.fit(X_train, y_train)
 
-    # Evaluation on held-out split
+    # Load cost-optimal threshold from threshold_analysis.json if available
+    eval_threshold = DEFAULT_THRESHOLD
+    if os.path.exists(THRESHOLD_JSON):
+        try:
+            with open(THRESHOLD_JSON, "r") as f:
+                t_data = json.load(f)
+                eval_threshold = float(t_data.get("optimal_threshold", DEFAULT_THRESHOLD))
+                print(f"[train] Loaded cost-optimal threshold from {THRESHOLD_JSON}: {eval_threshold}")
+        except Exception as e:
+            print(f"[train] Warning reading {THRESHOLD_JSON}: {e}. Using fallback default threshold {DEFAULT_THRESHOLD}")
+    else:
+        print(f"[train] {THRESHOLD_JSON} not found. Using fallback default threshold {DEFAULT_THRESHOLD}")
+
+    # Evaluation on held-out split using cost-optimal threshold
     y_pred_prob = model.predict_proba(X_test)[:, 1]
-    y_pred_binary = (y_pred_prob >= 0.35).astype(int)
+    y_pred_binary = (y_pred_prob >= eval_threshold).astype(int)
 
     precision = float(precision_score(y_test, y_pred_binary, zero_division=0))
     recall = float(recall_score(y_test, y_pred_binary, zero_division=0))
@@ -104,7 +128,7 @@ def train_model():
     prec_array, rec_array, _ = precision_recall_curve(y_test, y_pred_prob)
     pr_auc = float(auc(rec_array, prec_array))
 
-    print(f"[train] Held-Out Evaluation Results (Threshold=0.35):")
+    print(f"[train] Held-Out Evaluation Results (Threshold={eval_threshold}):")
     print(f"  Precision: {precision:.4f}")
     print(f"  Recall:    {recall:.4f}")
     print(f"  PR-AUC:    {pr_auc:.4f}")
@@ -150,7 +174,7 @@ def train_model():
             "end": str(test_df["timestamp"].max())
         },
         "evaluation_metrics": {
-            "threshold_used": 0.35,
+            "threshold_used": eval_threshold,
             "precision": precision,
             "recall": recall,
             "pr_auc": pr_auc,
