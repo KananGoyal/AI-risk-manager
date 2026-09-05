@@ -68,6 +68,15 @@ def train_model():
     print(f"[train] Train fraud label ratio: {y_train.mean():.2%}")
     print(f"[train] Test fraud label ratio:  {y_test.mean():.2%}")
 
+    # --- Fix 2: Dynamic scale_pos_weight to address 39:1 class imbalance ---
+    # Compute from the actual training split so the value stays correct if the
+    # dataset grows or the fraud injection rate changes.
+    n_neg_train = int((y_train == 0).sum())
+    n_pos_train = int((y_train == 1).sum())
+    scale_pos_weight = round(n_neg_train / max(n_pos_train, 1), 2)
+    print(f"[train] Class ratio neg/pos in train: {n_neg_train}/{n_pos_train} = {scale_pos_weight:.2f}")
+    print(f"[train] Using scale_pos_weight = {scale_pos_weight}")
+
     # Model training with XGBoost or HistGradientBoosting fallback
     try:
         from xgboost import XGBClassifier
@@ -78,6 +87,7 @@ def train_model():
             learning_rate=0.08,
             subsample=0.85,
             colsample_bytree=0.85,
+            scale_pos_weight=scale_pos_weight,   # Fix 2: correct for class imbalance
             random_state=42,
             eval_metric="logloss"
         )
@@ -114,26 +124,32 @@ def train_model():
     joblib.dump(model, MODEL_PATH)
     print(f"[train] Saved model artifact to {MODEL_PATH}")
 
-    # Compute and export merchant/category cohort baselines
-    print("[train] Precomputing cohort baselines for instant real-time lookup...")
+    # --- Fix 3: Compute merchant/category baselines using non-fraud rows only ---
+    # Using all rows (including fraud) contaminates mean_amount/std_amount because
+    # fraud transactions typically have higher amounts, compressing z-scores and
+    # hiding genuine anomalies.  fraud_rate is still computed over all rows.
+    print("[train] Precomputing cohort baselines (non-fraud rows only) for real-time lookup...")
     merchant_baselines = {}
-    grouped = full_df.groupby("merchant")
+    nf_full_df = full_df[full_df["is_fraud"] == 0]   # non-fraud filter for mean/std
+    grouped = nf_full_df.groupby("merchant")
     for merchant_name, m_group in grouped:
+        # fraud_rate still uses the full merchant group (all transactions)
+        all_merchant = full_df[full_df["merchant"] == merchant_name]
         merchant_baselines[merchant_name] = {
-            "mean_amount": float(m_group["amount"].mean()),
-            "std_amount": float(m_group["amount"].std() if len(m_group) > 1 else 15.0),
-            "txn_count_24h_avg": float(len(m_group) / 30.0),
-            "category": m_group["merchant_category"].iloc[0],
-            "fraud_rate": float(m_group["is_fraud"].mean())
+            "mean_amount":        float(m_group["amount"].mean()),
+            "std_amount":         float(m_group["amount"].std() if len(m_group) > 1 else 15.0),
+            "txn_count_24h_avg":  float(len(all_merchant) / 30.0),
+            "category":           m_group["merchant_category"].iloc[0],
+            "fraud_rate":         float(all_merchant["is_fraud"].mean())
         }
 
-    # Add default global baseline
+    # Add default global baseline using non-fraud rows for mean/std
     merchant_baselines["__GLOBAL_DEFAULT__"] = {
-        "mean_amount": float(full_df["amount"].mean()),
-        "std_amount": float(full_df["amount"].std()),
+        "mean_amount":       float(nf_full_df["amount"].mean()),
+        "std_amount":        float(nf_full_df["amount"].std()),
         "txn_count_24h_avg": float(len(full_df) / (30.0 * 12.0)),
-        "category": "grocery_pos",
-        "fraud_rate": float(full_df["is_fraud"].mean())
+        "category":          "grocery_pos",
+        "fraud_rate":        float(full_df["is_fraud"].mean())
     }
 
     with open(BASELINES_PATH, "w") as f:
@@ -142,19 +158,20 @@ def train_model():
 
     # Save evaluation report
     report = {
-        "model_type": type(model).__name__,
-        "train_samples": int(len(X_train)),
-        "held_out_samples": int(len(X_test)),
+        "model_type":           type(model).__name__,
+        "train_samples":        int(len(X_train)),
+        "held_out_samples":     int(len(X_test)),
+        "scale_pos_weight_used": scale_pos_weight,   # Fix 2: traceability
         "held_out_time_range": {
             "start": str(test_df["timestamp"].min()),
-            "end": str(test_df["timestamp"].max())
+            "end":   str(test_df["timestamp"].max())
         },
         "evaluation_metrics": {
             "threshold_used": 0.35,
-            "precision": precision,
-            "recall": recall,
-            "pr_auc": pr_auc,
-            "roc_auc": roc_auc
+            "precision":      precision,
+            "recall":         recall,
+            "pr_auc":         pr_auc,
+            "roc_auc":        roc_auc
         },
         "feature_names": FEATURE_COLUMNS
     }

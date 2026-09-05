@@ -27,7 +27,7 @@ _PROJECT_ROOT = os.path.abspath(os.path.join(_SCRIPT_DIR, ".."))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from src.db import get_live_transactions, get_transaction_by_id, save_scored_transaction
+from src.db import get_live_transactions, get_transaction_by_id, save_scored_transaction, load_history_from_csv
 from src.person_a.simulate_live_stream import process_single_event
 
 THRESHOLD_JSON = os.path.join(_PROJECT_ROOT, "data", "models", "threshold_analysis.json")
@@ -53,6 +53,10 @@ def seed_initial_demo_data():
 async def lifespan(app: FastAPI):
     """Lifespan event handler for FastAPI startup and shutdown."""
     try:
+        # Pre-populate transaction_history with full processed dataset so that
+        # get_recent_history_for_scoring() can return real context for live scoring.
+        if os.path.exists(INJECTED_CSV):
+            load_history_from_csv(INJECTED_CSV)
         seed_initial_demo_data()
     except Exception as e:
         print(f"[api_server] Startup seed warning: {e}")

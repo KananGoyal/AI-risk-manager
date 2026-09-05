@@ -29,6 +29,7 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 from src.person_a.feature_engineering import compute_features, FEATURE_COLUMNS
+from src.db import get_recent_history_for_scoring
 
 MODELS_DIR = os.path.join(_PROJECT_ROOT, "data", "models")
 MODEL_PATH = os.path.join(MODELS_DIR, "fraud_model.joblib")
@@ -69,7 +70,22 @@ def score_transaction(
     start_t = time.time()
     _load_resources()
 
-    # 1. Feature Engineering
+    # 1. History hydration — if caller did not supply a rolling-window context
+    #    (e.g. api_server's "Inject Batch" button), auto-fetch the last 24 h of
+    #    real transactions for this merchant from the SQLite history table.
+    #    Callers that already pass their own history_context (e.g. simulate_live_stream.py)
+    #    are completely unaffected — the None-check short-circuits for them.
+    merchant = transaction.get("merchant", "unknown")
+    if history_context is None:
+        # Anchor the lookback to the transaction's own timestamp, not wall-clock
+        # now — this ensures historical dataset replay (e.g., Jan 2026 timestamps)
+        # uses the correct simulation time as the window reference.
+        txn_ts = transaction.get("timestamp")
+        history_context = get_recent_history_for_scoring(
+            merchant, lookback_hours=24, reference_timestamp=txn_ts
+        )
+
+    # 2. Feature Engineering
     features = compute_features(transaction, history_context)
     feat_df = pd.DataFrame([features])[FEATURE_COLUMNS]
 
@@ -85,7 +101,6 @@ def score_transaction(
     risk_score = float(np.clip(prob, 0.0, 1.0))
 
     # 3. Fast In-Memory Cohort Baseline Lookup (<1ms)
-    merchant = transaction.get("merchant", "unknown")
     baseline = _baselines.get(merchant, _baselines.get("__GLOBAL_DEFAULT__", {
         "mean_amount": 65.0,
         "std_amount": 45.0,
