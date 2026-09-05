@@ -2,6 +2,7 @@
   "model_type": "XGBClassifier",
   "train_samples": 12312,
   "held_out_samples": 3078,
+  "scale_pos_weight_used": 20.34,
   "held_out_time_range": {
     "start": "2026-01-25 00:43:18",
     "end": "2026-01-30 23:57:02"

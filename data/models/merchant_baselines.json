@@ -1,91 +1,91 @@
 {
   "fraud_Baumbach_Stores": {
-    "mean_amount": 120.13889451476796,
-    "std_amount": 200.23290562486525,
+    "mean_amount": 117.22754506437768,
+    "std_amount": 194.84186657190966,
     "txn_count_24h_avg": 39.5,
     "category": "misc_net",
     "fraud_rate": 0.016877637130801686
   },
   "fraud_Bednar_Inc": {
-    "mean_amount": 114.53792993630572,
-    "std_amount": 206.3966214334375,
+    "mean_amount": 110.59098775510206,
+    "std_amount": 199.2043637388548,
     "txn_count_24h_avg": 41.86666666666667,
     "category": "shopping_net",
     "fraud_rate": 0.024681528662420384
   },
   "fraud_Boyer_Group": {
-    "mean_amount": 130.54163109756098,
-    "std_amount": 205.65206641443189,
+    "mean_amount": 116.1010883797054,
+    "std_amount": 195.92755831722874,
     "txn_count_24h_avg": 43.733333333333334,
     "category": "gas_transport",
     "fraud_rate": 0.06859756097560976
   },
   "fraud_Cruickshank_Apparel": {
-    "mean_amount": 120.2071485943775,
-    "std_amount": 204.62592813574727,
+    "mean_amount": 114.95372244897959,
+    "std_amount": 194.0588102760928,
     "txn_count_24h_avg": 41.5,
     "category": "misc_net",
     "fraud_rate": 0.01606425702811245
   },
   "fraud_Gould_Group": {
-    "mean_amount": 107.57213333333334,
-    "std_amount": 184.29061842140928,
+    "mean_amount": 104.57877403846155,
+    "std_amount": 177.93588889731564,
     "txn_count_24h_avg": 42.5,
     "category": "shopping_net",
     "fraud_rate": 0.021176470588235293
   },
   "fraud_Heller_Gas": {
-    "mean_amount": 109.84131894484412,
-    "std_amount": 187.15290702807422,
+    "mean_amount": 105.613835504886,
+    "std_amount": 179.4084554139798,
     "txn_count_24h_avg": 41.7,
     "category": "entertainment",
     "fraud_rate": 0.01838529176658673
   },
   "fraud_Kihn_Inc": {
-    "mean_amount": 117.96056966897613,
-    "std_amount": 194.32254022204967,
+    "mean_amount": 115.28753737214791,
+    "std_amount": 190.33212011852487,
     "txn_count_24h_avg": 43.3,
     "category": "grocery_pos",
     "fraud_rate": 0.02155504234026174
   },
   "fraud_Kirlin_Inc": {
-    "mean_amount": 182.7789181066867,
-    "std_amount": 362.64581400316285,
+    "mean_amount": 112.56172051696285,
+    "std_amount": 187.53259684021776,
     "txn_count_24h_avg": 44.36666666666667,
     "category": "misc_net",
     "fraud_rate": 0.06987227648384674
   },
   "fraud_Rippin_LLC": {
-    "mean_amount": 119.99260642270352,
-    "std_amount": 183.18148552913414,
+    "mean_amount": 107.75820016142048,
+    "std_amount": 175.42813636869977,
     "txn_count_24h_avg": 44.63333333333333,
     "category": "gas_transport",
     "fraud_rate": 0.07468259895444361
   },
   "fraud_Schumm_Group": {
-    "mean_amount": 124.10564516129033,
-    "std_amount": 210.8556167939627,
+    "mean_amount": 117.19179850124897,
+    "std_amount": 197.7224754479437,
     "txn_count_24h_avg": 41.333333333333336,
     "category": "grocery_net",
     "fraud_rate": 0.031451612903225803
   },
   "fraud_Vandervort_Tech": {
-    "mean_amount": 176.54344033496162,
-    "std_amount": 354.3662086000628,
+    "mean_amount": 120.90057261410789,
+    "std_amount": 207.00673150398,
     "txn_count_24h_avg": 47.766666666666666,
     "category": "entertainment",
     "fraud_rate": 0.15910676901605025
   },
   "fraud_Weber_Market": {
-    "mean_amount": 110.643227124183,
-    "std_amount": 189.64364294046146,
+    "mean_amount": 106.65809286898839,
+    "std_amount": 181.72943049826273,
     "txn_count_24h_avg": 40.8,
     "category": "gas_transport",
     "fraud_rate": 0.014705882352941176
   },
   "__GLOBAL_DEFAULT__": {
-    "mean_amount": 128.73316374269004,
-    "std_amount": 235.3695132216124,
+    "mean_amount": 112.41071832617733,
+    "std_amount": 190.23941939935676,
     "txn_count_24h_avg": 42.75,
     "category": "grocery_pos",
     "fraud_rate": 0.04658869395711501
